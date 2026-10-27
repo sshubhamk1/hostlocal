@@ -22,7 +22,10 @@ object SsdpStats {
     @Volatile var replyError: String? = null
         internal set
 
-    fun reset() { searches = 0; replies = 0; lastFrom = null; lastSt = null; replyError = null }
+    /** Any SSDP datagram (searches or announcements), by sender IP. */
+    val sources: MutableMap<String, Int> = java.util.concurrent.ConcurrentHashMap()
+
+    fun reset() { searches = 0; replies = 0; lastFrom = null; lastSt = null; replyError = null; sources.clear() }
 }
 
 /** SSDP message building / matching, kept free of sockets for testing. */
@@ -84,6 +87,7 @@ class SsdpAdvertiser(private val ip: String, private val uuid: String, private v
                     val p = DatagramPacket(buf, buf.size)
                     s.receive(p)
                     val req = String(p.data, 0, p.length)
+                    p.address.hostAddress?.let { SsdpStats.sources.merge(it, 1, Int::plus) }
                     if (req.startsWith("M-SEARCH", ignoreCase = true)) {
                         SsdpStats.searches++
                         SsdpStats.lastFrom = p.address.hostAddress

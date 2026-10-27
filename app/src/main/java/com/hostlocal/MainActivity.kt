@@ -128,6 +128,11 @@ class MainActivity : ComponentActivity() {
                                 (SsdpStats.lastFrom?.let { " (last from $it)" } ?: ""),
                             style = MaterialTheme.typography.bodySmall,
                         )
+                        Text(
+                            "SSDP packets by sender: " +
+                                (SsdpStats.sources.entries.joinToString { "${it.key}=${it.value}" }.ifEmpty { "none" }),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                         SsdpStats.replyError?.let { Text("SSDP reply error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.dlnaError?.let { Text("DLNA error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.ftpError?.let { Text("FTP error: $it", color = MaterialTheme.colorScheme.error) }
