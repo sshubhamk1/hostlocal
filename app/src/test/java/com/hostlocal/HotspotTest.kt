@@ -13,15 +13,33 @@ class HotspotTest {
         assertEquals("192.168.43.1", r)
     }
 
-    @Test fun ignoresClientWifiAndMobile() {
-        assertNull(Hotspot.pickAddress(listOf(
-            IfaceInfo("wlan0", listOf("192.168.1.5")),
+    @Test fun fallsBackToRouterWifi() {
+        assertEquals("192.168.1.5", Hotspot.pickAddress(listOf(
             IfaceInfo("rmnet_data0", listOf("10.1.2.3")),
+            IfaceInfo("wlan0", listOf("192.168.1.5")),
+        )))
+    }
+
+    @Test fun ignoresMobileData() {
+        assertNull(Hotspot.pickAddress(listOf(IfaceInfo("rmnet_data0", listOf("10.1.2.3")))))
+    }
+
+    @Test fun hotspotPreferredOverWifi() {
+        assertEquals("192.168.43.1", Hotspot.pickAddress(listOf(
+            IfaceInfo("wlan0", listOf("192.168.1.5")),
+            IfaceInfo("swlan0", listOf("192.168.43.1")),
         )))
     }
 
     @Test fun ignoresApWithoutIpv4() {
         assertNull(Hotspot.pickAddress(listOf(IfaceInfo("ap0", emptyList()))))
+    }
+
+    @Test fun apWithoutIpv4FallsBackToWifi() {
+        assertEquals("192.168.1.5", Hotspot.pickAddress(listOf(
+            IfaceInfo("ap0", emptyList()),
+            IfaceInfo("wlan0", listOf("192.168.1.5")),
+        )))
     }
 
     @Test fun matchesWlan1() {

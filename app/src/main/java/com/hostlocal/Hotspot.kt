@@ -7,13 +7,18 @@ import java.net.NetworkInterface
 data class IfaceInfo(val name: String, val ipv4: List<String>)
 
 object Hotspot {
-    // Typical tether/AP interface names across OEMs. wlan0 is the client Wi-Fi, excluded.
+    // Typical tether/AP interface names across OEMs.
     private val AP_NAME = Regex("^(ap\\d*|swlan\\d*|softap\\d*|wlan[1-9]\\d*|rndis\\d*)$")
 
-    /** Hotspot IPv4 or null when hotspot is off. */
+    // Client Wi-Fi / ethernet: used when no hotspot is active (phone joined a router).
+    private val LAN_NAME = Regex("^(wlan0|eth\\d+)$")
+
+    /** Address to serve on: hotspot if active, else the router LAN IP, else null. */
     fun pickAddress(ifaces: List<IfaceInfo>): String? =
-        ifaces.firstOrNull { AP_NAME.matches(it.name) && it.ipv4.isNotEmpty() }
-            ?.ipv4?.first()
+        firstWithIp(ifaces, AP_NAME) ?: firstWithIp(ifaces, LAN_NAME)
+
+    private fun firstWithIp(ifaces: List<IfaceInfo>, name: Regex): String? =
+        ifaces.firstOrNull { name.matches(it.name) && it.ipv4.isNotEmpty() }?.ipv4?.first()
 
     fun currentAddress(): String? {
         val ifaces = try {

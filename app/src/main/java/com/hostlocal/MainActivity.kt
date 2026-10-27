@@ -47,11 +47,15 @@ class MainActivity : ComponentActivity() {
                 var path by remember { mutableStateOf(settings.folderPath) }
                 var error by remember { mutableStateOf(HostService.lastError) }
                 var hotspotIp by remember { mutableStateOf(Hotspot.currentAddress()) }
+                var ftpAddr by remember { mutableStateOf(HostService.ftpAddress) }
+                var mdnsAddr by remember { mutableStateOf(HostService.mdnsAddress) }
                 LaunchedEffect(Unit) {
                     while (true) {
                         hotspotIp = Hotspot.currentAddress()
                         running = HostService.running
                         error = HostService.lastError
+                        ftpAddr = HostService.ftpAddress
+                        mdnsAddr = HostService.mdnsAddress
                         delay(2000)
                     }
                 }
@@ -92,7 +96,7 @@ class MainActivity : ComponentActivity() {
                     }
                     Text(
                         hotspotIp?.let { "ftp://$it:${Settings.FTP_PORT}" }
-                            ?: "Hotspot off - turn on mobile hotspot",
+                            ?: "No network - turn on hotspot or join Wi-Fi",
                         style = MaterialTheme.typography.titleMedium,
                     )
                     if (hotspotIp != null) {
@@ -101,12 +105,12 @@ class MainActivity : ComponentActivity() {
                     Text("Anonymous, read-only")
                     if (running) {
                         Text(
-                            if (HostService.ftpAddress != null) "FTP: serving on ${HostService.ftpAddress}"
-                            else "FTP: waiting for hotspot",
+                            if (ftpAddr != null) "FTP: serving on $ftpAddr"
+                            else "FTP: waiting for network",
                         )
                         Text(
-                            if (HostService.mdnsAddress != null) "mDNS: advertising ${MdnsHost.FQDN}"
-                            else "mDNS: waiting for hotspot",
+                            if (mdnsAddr != null) "mDNS: advertising ${MdnsHost.FQDN}"
+                            else "mDNS: waiting for network",
                         )
                         HostService.ftpError?.let { Text("FTP error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.mdnsError?.let { Text("mDNS error: $it", color = MaterialTheme.colorScheme.error) }

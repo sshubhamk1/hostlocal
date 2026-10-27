@@ -16,8 +16,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
- * Foreground service owning FTP + mDNS. Both are bound to the hotspot IP and
- * restarted whenever it changes or disappears.
+ * Foreground service owning FTP + mDNS. Both are bound to the active LAN IP
+ * (hotspot, else Wi-Fi) and restarted whenever it changes or disappears.
  */
 class HostService : Service() {
     private var ftp: FtpHost? = null
@@ -134,7 +134,7 @@ class HostService : Service() {
         @Volatile var running = false
             private set
 
-        /** Hotspot IP FTP / mDNS are currently bound to; null if not serving. */
+        /** LAN IP FTP / mDNS are currently bound to; null if not serving. */
         @Volatile var ftpAddress: String? = null
             private set
         @Volatile var mdnsAddress: String? = null
