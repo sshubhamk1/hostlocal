@@ -1,6 +1,7 @@
 package com.hostlocal.dlna
 
 import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.MulticastSocket
@@ -115,13 +116,24 @@ class SsdpAdvertiser(private val ip: String, private val uuid: String, private v
 
     private fun announce(alive: Boolean) {
         val s = socket ?: return
-        runCatching {
-            for ((nt, usn) in SsdpMessages.targets(uuid)) {
-                val bytes = SsdpMessages.notify(nt, usn, location, alive).toByteArray()
-                s.send(DatagramPacket(bytes, bytes.size, group, 1900))
+        val bcast = broadcastAddress()
+        for ((nt, usn) in SsdpMessages.targets(uuid)) {
+            val bytes = SsdpMessages.notify(nt, usn, location, alive).toByteArray()
+            runCatching { s.send(DatagramPacket(bytes, bytes.size, group, 1900)) }
+            // Routers that filter multicast still flood subnet broadcasts.
+            if (bcast != null) runCatching {
+                DatagramSocket(InetSocketAddress(InetAddress.getByName(ip), 0)).use { b ->
+                    b.broadcast = true
+                    b.send(DatagramPacket(bytes, bytes.size, bcast, 1900))
+                }
             }
         }
     }
+
+    private fun broadcastAddress(): InetAddress? = runCatching {
+        NetworkInterface.getByInetAddress(InetAddress.getByName(ip))
+            .interfaceAddresses.firstOrNull { it.address.hostAddress == ip }?.broadcast
+    }.getOrNull()
 
     fun stop() {
         notifier?.shutdownNow()
