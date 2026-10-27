@@ -168,4 +168,27 @@ class DlnaTest {
         assertTrue(resp.startsWith("HTTP/1.1 200 OK"))
         assertTrue(resp.contains("LOCATION: http://1.2.3.4:8200/desc.xml"))
     }
+
+    @Test fun subnetSweep24() {
+        val me = java.net.InetAddress.getByName("192.168.1.14")
+        val hosts = SsdpMessages.hostsIn(me, 24).map { it.hostAddress }
+        assertEquals(253, hosts.size)
+        assertFalse(hosts.contains("192.168.1.14"))
+        assertFalse(hosts.contains("192.168.1.0"))
+        assertFalse(hosts.contains("192.168.1.255"))
+        assertTrue(hosts.contains("192.168.1.1"))
+        assertTrue(hosts.contains("192.168.1.254"))
+    }
+
+    @Test fun subnetSweepCappedForBigNetworks() {
+        val hosts = SsdpMessages.hostsIn(java.net.InetAddress.getByName("10.5.77.9"), 8)
+        assertEquals(1021, hosts.size) // /22 -> 1024 - net - bcast - self
+        assertTrue(hosts.all { it.hostAddress!!.startsWith("10.5.") })
+    }
+
+    @Test fun subnetSweepHotspotStyle() {
+        val hosts = SsdpMessages.hostsIn(java.net.InetAddress.getByName("192.168.43.1"), 24).map { it.hostAddress }
+        assertEquals(253, hosts.size)
+        assertTrue(hosts.contains("192.168.43.2"))
+    }
 }

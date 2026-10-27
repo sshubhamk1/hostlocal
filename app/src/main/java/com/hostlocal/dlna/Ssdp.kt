@@ -50,6 +50,19 @@ object SsdpMessages {
         return if (st == "ssdp:all") all else all.filter { it.first.equals(st, ignoreCase = true) }
     }
 
+    /** All usable host addresses in [self]'s subnet except itself; sweep capped at /22 (~1k hosts). */
+    fun hostsIn(self: InetAddress, prefix: Int): List<InetAddress> {
+        val p = prefix.coerceIn(22, 30)
+        val ipInt = self.address.fold(0L) { acc, b -> (acc shl 8) or (b.toLong() and 0xff) }
+        val mask = (0xFFFFFFFFL shl (32 - p)) and 0xFFFFFFFFL
+        val net = ipInt and mask
+        val bcast = (net or mask.inv()) and 0xFFFFFFFFL
+        return (net + 1 until bcast).filter { it != ipInt }.map { n ->
+            InetAddress.getByAddress(byteArrayOf(
+                (n shr 24).toByte(), (n shr 16).toByte(), (n shr 8).toByte(), n.toByte()))
+        }
+    }
+
     private const val SERVER = "Android/13 UPnP/1.0 HostLocal/1.0"
 
     fun response(st: String, usn: String, location: String) =
@@ -116,6 +129,7 @@ class SsdpAdvertiser(private val ip: String, private val uuid: String, private v
 
     private fun announce(alive: Boolean) {
         val s = socket ?: return
+        unicastSweep(alive)
         val bcast = broadcastAddress()
         for ((nt, usn) in SsdpMessages.targets(uuid)) {
             val bytes = SsdpMessages.notify(nt, usn, location, alive).toByteArray()
@@ -129,6 +143,29 @@ class SsdpAdvertiser(private val ip: String, private val uuid: String, private v
             }
         }
     }
+
+    /** Unicast every host on the subnet; works even when the network filters multicast. */
+    private fun unicastSweep(alive: Boolean) {
+        val hosts = subnetHosts()
+        if (hosts.isEmpty()) return
+        val payloads = SsdpMessages.targets(uuid).map { (nt, usn) ->
+            SsdpMessages.notify(nt, usn, location, alive).toByteArray()
+        }
+        runCatching {
+            DatagramSocket(InetSocketAddress(InetAddress.getByName(ip), 0)).use { sock ->
+                for (host in hosts) for (bytes in payloads) {
+                    runCatching { sock.send(DatagramPacket(bytes, bytes.size, host, 1900)) }
+                }
+            }
+        }
+    }
+
+    private fun subnetHosts(): List<InetAddress> = runCatching {
+        val self = InetAddress.getByName(ip)
+        val prefix = NetworkInterface.getByInetAddress(self).interfaceAddresses
+            .first { it.address.hostAddress == ip }.networkPrefixLength.toInt()
+        SsdpMessages.hostsIn(self, prefix)
+    }.getOrDefault(emptyList())
 
     private fun broadcastAddress(): InetAddress? = runCatching {
         NetworkInterface.getByInetAddress(InetAddress.getByName(ip))
