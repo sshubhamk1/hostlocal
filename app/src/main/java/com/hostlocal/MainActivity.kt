@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 var hotspotIp by remember { mutableStateOf(Hotspot.currentAddress()) }
                 var ftpAddr by remember { mutableStateOf(HostService.ftpAddress) }
                 var mdnsAddr by remember { mutableStateOf(HostService.mdnsAddress) }
+                var dlnaAddr by remember { mutableStateOf(HostService.dlnaAddress) }
                 LaunchedEffect(Unit) {
                     while (true) {
                         hotspotIp = Hotspot.currentAddress()
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
                         error = HostService.lastError
                         ftpAddr = HostService.ftpAddress
                         mdnsAddr = HostService.mdnsAddress
+                        dlnaAddr = HostService.dlnaAddress
                         delay(2000)
                     }
                 }
@@ -112,6 +114,11 @@ class MainActivity : ComponentActivity() {
                             if (mdnsAddr != null) "mDNS: advertising ${MdnsHost.FQDN}"
                             else "mDNS: waiting for network",
                         )
+                        Text(
+                            if (dlnaAddr != null) "DLNA: serving as ${Settings.DLNA_NAME} (port ${Settings.DLNA_PORT})"
+                            else "DLNA: waiting for network",
+                        )
+                        HostService.dlnaError?.let { Text("DLNA error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.ftpError?.let { Text("FTP error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.mdnsError?.let { Text("mDNS error: $it", color = MaterialTheme.colorScheme.error) }
                     }

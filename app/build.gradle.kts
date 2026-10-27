@@ -64,6 +64,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("org.apache.ftpserver:ftpserver-core:1.2.0")
     testImplementation("junit:junit:4.13.2")
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
     implementation("org.jmdns:jmdns:3.5.9")
     implementation("org.slf4j:slf4j-android:1.7.36")
 }

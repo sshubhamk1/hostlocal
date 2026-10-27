@@ -10,6 +10,7 @@ import android.net.wifi.WifiManager
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import com.hostlocal.dlna.DlnaHost
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit
 class HostService : Service() {
     private var ftp: FtpHost? = null
     private var mdns: MdnsHost? = null
+    private var dlna: DlnaHost? = null
     private var boundIp: String? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
@@ -67,37 +69,54 @@ class HostService : Service() {
 
     private fun syncToHotspot(folder: File) {
         val ip = Hotspot.currentAddress()
-        if (ip == boundIp && (ip == null || (ftp != null && mdns != null))) return
-
-        stopServers()
-        boundIp = ip
+        if (ip != boundIp) {
+            stopServers()
+            boundIp = ip
+            ftpError = null
+            mdnsError = null
+            dlnaError = null
+        }
         if (ip == null) return
 
-        ftpError = null
-        mdnsError = null
-        try {
+        // Each server retries independently so one failure doesn't bounce the others.
+        if (ftp == null) try {
             ftp = FtpHost(folder, ip).also { it.start() }
             ftpAddress = ip
+            ftpError = null
         } catch (e: Exception) {
             ftp = null
             ftpError = e.message ?: e.javaClass.simpleName
         }
-        try {
+        if (mdns == null) try {
             mdns = MdnsHost(ip).also { it.start() }
             mdnsAddress = ip
+            mdnsError = null
         } catch (e: Exception) {
             mdns = null
             mdnsError = e.message ?: e.javaClass.simpleName
+        }
+        if (dlna == null) try {
+            dlna = DlnaHost(folder, ip, Settings(this).dlnaUuid, VideoThumbs(File(cacheDir, "thumbs")))
+                .also { it.start() }
+            dlnaAddress = ip
+            dlnaError = null
+        } catch (e: Exception) {
+            runCatching { dlna?.stop() }
+            dlna = null
+            dlnaError = e.message ?: e.javaClass.simpleName
         }
     }
 
     private fun stopServers() {
         runCatching { ftp?.stop() }
         runCatching { mdns?.stop() }
+        runCatching { dlna?.stop() }
         ftp = null
         mdns = null
+        dlna = null
         ftpAddress = null
         mdnsAddress = null
+        dlnaAddress = null
     }
 
     override fun onDestroy() {
@@ -140,6 +159,10 @@ class HostService : Service() {
         @Volatile var mdnsAddress: String? = null
             private set
 
+        @Volatile var dlnaAddress: String? = null
+            private set
+        @Volatile var dlnaError: String? = null
+            private set
         @Volatile var ftpError: String? = null
             private set
         @Volatile var mdnsError: String? = null
