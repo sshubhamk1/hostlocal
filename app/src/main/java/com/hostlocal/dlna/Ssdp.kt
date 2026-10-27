@@ -9,6 +9,22 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
+/** Live counters so the UI can show whether other devices' searches reach us. */
+object SsdpStats {
+    @Volatile var searches = 0
+        internal set
+    @Volatile var replies = 0
+        internal set
+    @Volatile var lastFrom: String? = null
+        internal set
+    @Volatile var lastSt: String? = null
+        internal set
+    @Volatile var replyError: String? = null
+        internal set
+
+    fun reset() { searches = 0; replies = 0; lastFrom = null; lastSt = null; replyError = null }
+}
+
 /** SSDP message building / matching, kept free of sockets for testing. */
 object SsdpMessages {
     /** (NT/ST, USN) pairs this device advertises. */
@@ -49,6 +65,7 @@ class SsdpAdvertiser(private val ip: String, private val uuid: String, private v
     private val group = InetAddress.getByName("239.255.255.250")
 
     fun start() {
+        SsdpStats.reset()
         val nif = NetworkInterface.getByInetAddress(InetAddress.getByName(ip))
             ?: error("No interface for $ip")
         val s = MulticastSocket(null as java.net.SocketAddress?).apply {
@@ -67,9 +84,19 @@ class SsdpAdvertiser(private val ip: String, private val uuid: String, private v
                     val p = DatagramPacket(buf, buf.size)
                     s.receive(p)
                     val req = String(p.data, 0, p.length)
+                    if (req.startsWith("M-SEARCH", ignoreCase = true)) {
+                        SsdpStats.searches++
+                        SsdpStats.lastFrom = p.address.hostAddress
+                        SsdpStats.lastSt = req.lines().firstOrNull { it.startsWith("ST:", true) }?.substringAfter(':')?.trim()
+                    }
                     for ((st, usn) in SsdpMessages.matchSearch(req, uuid)) {
                         val bytes = SsdpMessages.response(st, usn, location).toByteArray()
-                        s.send(DatagramPacket(bytes, bytes.size, p.address, p.port))
+                        try {
+                            s.send(DatagramPacket(bytes, bytes.size, p.address, p.port))
+                            SsdpStats.replies++
+                        } catch (e: Exception) {
+                            SsdpStats.replyError = e.message ?: e.javaClass.simpleName
+                        }
                     }
                 } catch (e: Exception) {
                     if (s.isClosed) break

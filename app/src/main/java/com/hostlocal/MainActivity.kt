@@ -23,12 +23,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.hostlocal.dlna.SsdpStats
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -50,6 +52,7 @@ class MainActivity : ComponentActivity() {
                 var ftpAddr by remember { mutableStateOf(HostService.ftpAddress) }
                 var mdnsAddr by remember { mutableStateOf(HostService.mdnsAddress) }
                 var dlnaAddr by remember { mutableStateOf(HostService.dlnaAddress) }
+                var tick by remember { mutableStateOf(0) }
                 LaunchedEffect(Unit) {
                     while (true) {
                         hotspotIp = Hotspot.currentAddress()
@@ -58,6 +61,7 @@ class MainActivity : ComponentActivity() {
                         ftpAddr = HostService.ftpAddress
                         mdnsAddr = HostService.mdnsAddress
                         dlnaAddr = HostService.dlnaAddress
+                        tick++
                         delay(2000)
                     }
                 }
@@ -106,6 +110,7 @@ class MainActivity : ComponentActivity() {
                     }
                     Text("Anonymous, read-only")
                     if (running) {
+                        key(tick) {}
                         Text(
                             if (ftpAddr != null) "FTP: serving on $ftpAddr"
                             else "FTP: waiting for network",
@@ -118,6 +123,12 @@ class MainActivity : ComponentActivity() {
                             if (dlnaAddr != null) "DLNA: serving as ${Settings.DLNA_NAME} (port ${Settings.DLNA_PORT})"
                             else "DLNA: waiting for network",
                         )
+                        Text(
+                            "SSDP searches seen: ${SsdpStats.searches}, answered: ${SsdpStats.replies}" +
+                                (SsdpStats.lastFrom?.let { " (last from $it)" } ?: ""),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        SsdpStats.replyError?.let { Text("SSDP reply error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.dlnaError?.let { Text("DLNA error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.ftpError?.let { Text("FTP error: $it", color = MaterialTheme.colorScheme.error) }
                         HostService.mdnsError?.let { Text("mDNS error: $it", color = MaterialTheme.colorScheme.error) }
