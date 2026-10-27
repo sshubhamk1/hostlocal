@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
@@ -27,6 +28,7 @@ class HostService : Service() {
     private var boundIp: String? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
     private var watcher: ScheduledExecutorService? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -54,6 +56,14 @@ class HostService : Service() {
     private fun startWatcher(folder: File) {
         multicastLock = getSystemService(WifiManager::class.java)
             .createMulticastLock("hostlocal-mdns").apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        // Keep Wi-Fi out of power-save so incoming multicast (SSDP searches) isn't dropped.
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            WifiManager.WIFI_MODE_FULL_LOW_LATENCY else @Suppress("DEPRECATION") WifiManager.WIFI_MODE_FULL_HIGH_PERF
+        wifiLock = getSystemService(WifiManager::class.java)
+            .createWifiLock(mode, "hostlocal:wifi").apply {
                 setReferenceCounted(false)
                 acquire()
             }
@@ -129,6 +139,8 @@ class HostService : Service() {
         multicastLock = null
         wakeLock?.release()
         wakeLock = null
+        wifiLock?.release()
+        wifiLock = null
         running = false
         super.onDestroy()
     }
