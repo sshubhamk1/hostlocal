@@ -58,3 +58,9 @@ Never commit `keystore.properties`, `*.jks` or `local.properties` (all gitignore
 ## Docs
 
 Docs live in `docs/`, nav in `mkdocs.yml`. Update the relevant page when behaviour changes, and add new pages to `nav` (strict mode fails on pages not linked and on broken links).
+
+## Docs publishing
+
+`.github/workflows/docs.yml` builds the site with `mkdocs build --strict` on every PR that touches `docs/`, `mkdocs.yml` or `requirements-docs.txt`. On a push to `main` it also publishes the built site to the **`build`** branch (`mkdocs gh-deploy --force --remote-branch build`). That branch contains generated files only; never edit it by hand.
+
+To serve it, in the GitHub repo go to Settings → Pages → Source: *Deploy from a branch* → Branch `build`, folder `/ (root)`. The workflow needs `contents: write`, which the workflow file already requests.
