@@ -1,0 +1,76 @@
+site_name: HostLocal
+site_description: Android app that shares a video folder over FTP and DLNA on a phone hotspot or home Wi-Fi.
+docs_dir: docs
+strict: true
+
+validation:
+  links:
+    anchors: warn
+    unrecognized_links: warn
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Set up and build: getting-started.md
+      - Testing: testing.md
+      - Contributing: contributing.md
+  - Architecture:
+      - Overview: architecture.md
+      - Components:
+          - Service and lifecycle: components/service.md
+          - Network selection: components/network-selection.md
+          - FTP server: components/ftp.md
+          - mDNS hostname: components/mdns.md
+          - DLNA / UPnP: components/dlna.md
+          - UI and settings: components/ui.md
+      - Design decisions: decisions.md
+  - Networking:
+      - How devices find the phone: networking.md
+      - Troubleshooting: troubleshooting.md
+  - Reference:
+      - Ports, permissions, files: reference.md
+      - Roadmap and known limits: roadmap.md
