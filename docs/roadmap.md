@@ -20,7 +20,7 @@
 - **All-files access** blocks a Play Store release as-is ([decision](decisions.md#storage-all-files-access)).
 - Hotspot interface names are matched from a list; an unknown OEM name shows "No network".
 - Status is held in static fields, so there is one server set per process and the UI polls instead of observing.
-- No UI tests, no CI, no license file.
+- No UI tests and no app CI (only docs CI).
 - Only IPv4.
 
 ## Ideas

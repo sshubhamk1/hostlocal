@@ -59,4 +59,6 @@ docs/                  MkDocs site
 
 ## License
 
-No license file yet. Add one before sharing the code outside the team.
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Shubham Kumar.
+
+Third-party libraries keep their own licenses: Apache MINA FtpServer and JmDNS (Apache 2.0), NanoHTTPD (BSD 3-Clause), SLF4J (MIT), AndroidX and Jetpack Compose (Apache 2.0).
